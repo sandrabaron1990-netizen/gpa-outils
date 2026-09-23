@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calcul Prix Chantier — GPA</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:Arial,sans-serif;font-size:13px;background:#f0f2f5;color:#333;}
+
+header{
+  background:linear-gradient(135deg,#1f4e79,#2e75b6);
+  color:white;padding:10px 28px;
+  display:flex;align-items:center;gap:20px;
+  box-shadow:0 2px 6px rgba(0,0,0,0.2);
+}
+header .logo{font-size:22px;font-weight:900;letter-spacing:2px;background:rgba(255,255,255,0.15);padding:4px 12px;border-radius:6px;}
+header .title{font-size:17px;font-weight:bold;opacity:0.95;}
+header .subtitle{font-size:11px;opacity:0.7;margin-top:2px;}
+
+.tabs{display:flex;background:#17375e;padding:0 24px;gap:4px;}
+.tab{padding:10px 22px;color:rgba(255,255,255,0.65);cursor:pointer;border-bottom:3px solid transparent;font-size:13px;font-weight:500;transition:all 0.2s;border-radius:4px 4px 0 0;margin-top:4px;}
+.tab:hover{color:white;background:rgba(255,255,255,0.08);}
+.tab.active{color:white;border-bottom-color:#ffd700;background:rgba(255,255,255,0.12);}
+
+.content{padding:20px 24px;}
+.tab-pane{display:none;}
+.tab-pane.active{display:block;}
+
+.params-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:960px;}
+.card{background:white;border-radius:10px;padding:20px;box-shadow:0 1px 6px rgba(0,0,0,0.08);border:1px solid #e8edf3;}
+.card h3{font-size:13px;font-weight:700;color:#1f4e79;margin-bottom:14px;padding-bottom:8px;border-bottom:2px solid #D9E1F2;text-transform:uppercase;letter-spacing:.5px;}
+.param-row{display:flex;align-items:center;padding:5px 0;border-bottom:1px solid #f4f4f4;}
+.param-row:last-child{border-bottom:none;}
+.param-label{flex:1;color:#555;font-size:12.5px;}
+.param-input{width:110px;}
+.param-calc{width:110px;text-align:right;font-weight:600;color:#1f4e79;font-size:13px;}
+
+input.rose,input.rose-text{background:#FDEADA;border:1.5px solid #f0b8a0;border-radius:4px;padding:5px 8px;width:100%;font-size:13px;font-family:Arial,sans-serif;transition:border-color .2s,box-shadow .2s;}
+input.rose{text-align:right;}
+input.rose-text{text-align:left;}
+input.rose:focus,input.rose-text:focus{outline:none;border-color:#d9534f;box-shadow:0 0 0 3px rgba(217,83,79,0.15);}
+input.free{border:1px solid #dde;background:#fafafa;padding:4px 7px;border-radius:4px;width:100%;font-size:12px;}
+input.free:focus{outline:none;border-color:#2e75b6;}
+
+.chantier-wrap{background:white;border-radius:10px;box-shadow:0 1px 6px rgba(0,0,0,0.08);border:1px solid #e8edf3;overflow:hidden;}
+.toolbar{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:#f8f9fc;border-bottom:1px solid #e8edf3;flex-wrap:wrap;gap:8px;}
+.toolbar .project-info{display:flex;gap:12px;align-items:center;flex-wrap:wrap;}
+.toolbar label{font-size:11px;color:#888;margin-right:4px;}
+.toolbar input.proj{border:1px solid #dde;background:white;padding:4px 8px;border-radius:4px;font-size:12px;}
+.btn-print{background:#2e75b6;color:white;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;}
+.btn-print:hover{background:#1f4e79;}
+
+table{width:100%;border-collapse:collapse;}
+thead tr th{background:#D9E1F2;padding:9px 10px;text-align:center;font-weight:700;color:#1f4e79;border:1px solid #c0d0e8;font-size:12px;}
+tbody tr td{padding:4px 8px;border:1px solid #e8e8e8;vertical-align:middle;}
+
+.cat-cell{font-weight:700;text-align:center;font-size:11.5px;writing-mode:vertical-lr;transform:rotate(180deg);letter-spacing:.5px;padding:8px 5px;}
+.cat-mo{background:#E2EFDA;color:#375623;}
+.cat-mat{background:#FFF2CC;color:#7F6000;}
+.cat-fg{background:#FCE4D6;color:#7F3F00;}
+
+.total-cell{text-align:right;font-weight:600;color:#333;font-size:13px;white-space:nowrap;}
+.cost-display{text-align:right;color:#999;font-size:12px;font-style:italic;}
+
+tr.subtotal-row td{background:#D9E1F2;font-weight:700;color:#1f4e79;}
+tr.ff-row td{background:#EBF0FA;}
+tr.revient-row td{background:#f0f4fb;font-weight:700;}
+tr.marge-row td{background:#f7f9f2;}
+tr.vente-row td{background:#1f4e79;color:white;font-size:14px;font-weight:700;}
+
+.section-label{font-weight:600;font-size:12px;text-align:right;padding-right:12px !important;}
+.section-sublabel{font-size:11px;color:#888;text-align:right;padding-right:12px !important;}
+
+.legend{display:flex;align-items:center;gap:16px;font-size:11px;color:#888;margin-top:12px;flex-wrap:wrap;}
+.legend-item{display:flex;align-items:center;gap:5px;}
+.legend-box{width:14px;height:14px;border-radius:3px;border:1px solid #ccc;flex-shrink:0;}
+
+@media print{
+  body{background:white;}
+  .tabs,.btn-print{display:none !important;}
+  .tab-pane{display:block !important;}
+  .chantier-wrap{box-shadow:none;border:none;}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">GPA</div>
+  <div>
+    <div class="title">Calcul Prix Chantier</div>
+    <div class="subtitle">Outil de chiffrage &mdash; Climatisation</div>
+  </div>
+</header>
+
+<div class="tabs">
+  <div class="tab active" onclick="showTab('params')">&#9881; Param&egrave;tres</div>
+  <div class="tab" onclick="showTab('chantier')">&#127959; Calcul Chantier</div>
+</div>
+
+<div class="content">
+
+<!-- TAB PARAMETRES -->
+<div id="tab-params" class="tab-pane active">
+<div class="params-grid">
+
+  <div class="card">
+    <h3>Co&ucirc;ts horaires salari&eacute;s (&euro;/h)</h3>
+    <div class="param-row"><span class="param-label">Bredelle</span><div class="param-input"><input class="rose" type="number" id="p-bredelle" value="27.24" step="0.01" oninput="recalculate()"></div></div>
+    <div class="param-row"><span class="param-label">Dailliez</span><div class="param-input"><input class="rose" type="number" id="p-dailliez" value="30.53" step="0.01" oninput="recalculate()"></div></div>
+    <div class="param-row"><span class="param-label">Jankowiak</span><div class="param-input"><input class="rose" type="number" id="p-jankowiak" value="19.39" step="0.01" oninput="recalculate()"></div></div>
+    <div class="param-row"><span class="param-label">Najder</span><div class="param-input"><input class="rose" type="number" id="p-najder" value="24.92" step="0.01" oninput="recalculate()"></div></div>
+    <div class="param-row"><span class="param-label">Pele</span><div class="param-input"><input class="rose" type="number" id="p-pele" value="50.00" step="0.01" oninput="recalculate()"></div></div>
+    <div class="param-row"><span class="param-label">Ouartani</span><div class="param-input"><input class="rose" type="number" id="p-ouartani" value="15.06" step="0.01" oninput="recalculate()"></div></div>
+    <div class="param-row"><span class="param-label">Int&eacute;rim</span><div class="param-input"><input class="rose" type="number" id="p-interim" value="" placeholder="0" step="0.01" oninput="recalculate()"></div></div>
+  </div>
+
+  <div>
+    <div class="card" style="margin-bottom:16px;">
+      <h3>Param&egrave;tres g&eacute;n&eacute;raux</h3>
+      <div class="param-row"><span class="param-label">Nombre d&apos;hommes</span><div class="param-input"><input class="rose" type="number" id="p-nb-hommes" value="4" min="1" step="1" oninput="recalculate()"></div></div>
+      <div class="param-row"><span class="param-label">Jours ouvr&eacute;s / homme / an</span><div class="param-input"><input class="rose" type="number" id="p-jours-homme" value="225" min="1" oninput="recalculate()"></div></div>
+      <div class="param-row"><span class="param-label" style="font-style:italic;color:#999;">Total jours/hommes (an)</span><div class="param-calc" id="p-total-jh">900</div></div>
+      <div class="param-row" style="border-top:1px solid #eee;padding-top:8px;margin-top:4px;"><span class="param-label" style="font-weight:600;">Marge souhait&eacute;e (%)</span><div class="param-input"><input class="rose" type="number" id="p-marge" value="20" min="0" max="100" step="0.5" oninput="recalculate()"></div></div>
+    </div>
+    <div class="card">
+      <h3>Frais fixes annuels &mdash; Part Climatisation</h3>
+      <div class="param-row"><span class="param-label">Co&ucirc;t Abdelmoula (80%)</span><div class="param-calc">27&nbsp;485 &euro;</div></div>
+      <div class="param-row"><span class="param-label">Co&ucirc;t Lepage (80%)</span><div class="param-calc">42&nbsp;451 &euro;</div></div>
+      <div class="param-row"><span class="param-label">Co&ucirc;t Pele (part clim)</span><div class="param-calc">37&nbsp;799 &euro;</div></div>
+      <div class="param-row"><span class="param-label">Loyer (50%)</span><div class="param-calc">21&nbsp;643 &euro;</div></div>
+      <div class="param-row"><span class="param-label">Autres frais fixes (80%)</span><div class="param-calc">104&nbsp;000 &euro;</div></div>
+      <div class="param-row" style="border-top:2px solid #D9E1F2;padding-top:6px;margin-top:4px;"><span class="param-label" style="font-weight:700;">Total frais fixes Clim</span><div class="param-calc" style="color:#c0392b;">233&nbsp;377 &euro;</div></div>
+      <div class="param-row" style="background:#f0f4fb;border-radius:4px;padding:6px 4px;margin-top:6px;"><span class="param-label" style="color:#2e75b6;font-weight:600;">&rarr; Co&ucirc;t par jour/homme</span><div class="param-calc" style="color:#2e75b6;" id="p-cout-jh">259,31 &euro;</div></div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- TAB CALCUL CHANTIER -->
+<div id="tab-chantier" class="tab-pane">
+
+<div class="chantier-wrap">
+  <div class="toolbar">
+    <div class="project-info">
+      <div><label>Chantier :</label><input type="text" class="proj" id="proj-nom" placeholder="Nom du chantier&hellip;" style="width:200px;"></div>
+      <div><label>Client :</label><input type="text" class="proj" id="proj-client" placeholder="Client&hellip;" style="width:150px;"></div>
+      <div><label>Date :</label><input type="date" class="proj" id="proj-date" value="2026-03-01" style="width:140px;"></div>
+    </div>
+    <button class="btn-print" onclick="window.print()">&#128424; Imprimer</button>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width:80px;">Cat&eacute;gorie</th>
+        <th>D&eacute;signation / D&eacute;tail</th>
+        <th style="width:95px;">Quantit&eacute;</th>
+        <th style="width:60px;">Unit&eacute;</th>
+        <th style="width:130px;">Co&ucirc;t unitaire (&euro;)</th>
+        <th style="width:115px;">Total (&euro;)</th>
+      </tr>
+    </thead>
+    <tbody>
+
+    <!-- MAIN D OEUVRE -->
+    <tr>
+      <td class="cat-cell cat-mo" rowspan="10">Main-d&apos;&oelig;uvre</td>
+      <td>Bredelle</td>
+      <td><input class="rose" type="number" id="mo-bredelle-qty" value="" min="0" step="0.5" placeholder="0" oninput="recalculate()"></td>
+      <td style="text-align:center;color:#888;">h</td>
+      <td class="cost-display" id="mo-bredelle-cu">27,24 &euro;/h</td>
+      <td class="total-cell" id="mo-bredelle-tot">&mdash;</td>
+    </tr>
+    <tr>
+      <td>Dailliez</td>
+      <td><input class="rose" type="number" id="mo-dailliez-qty" value="" min="0" step="0.5" placeholder="0" oninput="recalculate()"></td>
+      <td style="text-align:center;color:#888;">h</td>
+      <td class="cost-display" id="mo-dailliez-cu">30,53 &euro;/h</td>
+      <td class="total-cell" id="mo-dailliez-tot">&mdash;</td>
+    </tr>
+    <tr>
+      <td>Jankowiak</td>
+      <td><input class="rose" type="number" id="mo-jankowiak-qty" value="" min="0" step="0.5" placeholder="0" oninput="recalculate()"></td>
+      <td style="text-align:center;color:#888;">h</td>
+      <td class="cost-display" id="mo-jankowiak-cu">19,39 &euro;/h</td>
+      <td class="total-cell" id="mo-jankowiak-tot">&mdash;</td>
+    </tr>
+    <tr>
+      <td>Najder</td>
+      <td><input class="rose" type="number" id="mo-najder-qty" value="" min="0" step="0.5" placeholder="0" oninput="recalculate()"></td>
+      <td style="text-align:center;color:#888;">h</td>
+      <td class="cost-display" id="mo-najder-cu">24,92 &euro;/h</td>
+      <td class="total-cell" id="mo-najder-tot">&mdash;</td>
+    </tr>
+    <tr>
+      <td>Pele</td>
+      <td><input class="rose" type="number" id="mo-pele-qty" value="30" min="0" step="0.5" oninput="recalculate()"></td>
+      <td style="text-align:center;color:#888;">h</td>
+      <td class="cost-display" id="mo-pele-cu">50,00 &euro;/h</td>
+      <td class="total-cell" id="mo-pele-tot">1&#160;500,00 &euro;</td>
+    </tr>
+    <tr>
+      <td>Ouartani</td>
+      <td><input class="rose" type="number" id="mo-ouartani-qty" value="" min="0" step="0.5" placeholder="0" oninput="recalculate()"></td>
+      <td style="text-align:center;color:#888;">h</td>
+      <td class="cost-display" id="mo-ouartani-cu">15,06 &euro;/h</td>
+      <td class="total-cell" id="mo-ouartani-tot">&mdash;</td>
+    </tr>
+    <tr>
+      <td>Int&eacute;rim</td>
+      <td><input class="rose" type="number" id="mo-interim-qty" value="" min="0" step="0.5" placeholder="0" oninput="recalculate()"></td>
+      <td style="text-align:center;color:#888;">h</td>
+      <td class="cost-display" id="mo-interim-cu">&mdash; &euro;/h</td>
+      <td class="total-cell" id="mo-interim-tot">&mdash;</td>
+    </tr>
+    <tr>
+      <td>Sous-traitance</td>
+      <td><input class="rose" type="number" id="mo-st-qty" value="" min="0" step="0.5" placeholder="0" oninput="recalculate()"></td>
+      <td style="text-align:center;color:#888;">h</td>
+      <td><input class="rose" type="number" id="mo-st-cu" value="" min="0" step="0.01" placeholder="&euro;/h" oninput="recalculate()"></td>
+      <td class="total-cell" id="mo-st-tot">&mdash;</td>
+    </tr>
+    <tr>
+      <td><input class="free" type="text" placeholder="D&eacute;signation libre&hellip;"></td>
+      <td><input class="rose" type="number" id="mo-l1-qty" value="" min="0" step="0.5" placeholder="0" oninput="recalculate()"></td>
+      <td style="text-align:center;color:#888;">h</td>
+      <td><input class="rose" type="number" id="mo-l1-cu" value="" min="0" step="0.01" placeholder="&euro;/h" oninput="recalculate()"></td>
+      <td class="total-cell" id="mo-l1-tot">&mdash;</td>
+    </tr>
+    <tr>
+      <td><input class="free" type="text" placeholder="D&eacute;signation libre&hellip;"></td>
+      <td><input class="rose" type="number" id="mo-l2-qty" value="" min="0" step="0.5" placeholder="0" oninput="recalculate()"></td>
+      <td style="text-align:center;color:#888;">h</td>
+      <td><input class="rose" type="number" id="mo-l2-cu" value="" min="0" step="0.01" placeholder="&euro;/h" oninput="recalculate()"></td>
+      <td class="total-cell" id="mo-l2-tot">&mdash;</td>
+    </tr>
+
+    <!-- MATERIAUX -->
+    <tr>
+      <td class="cat-cell cat-mat" rowspan="6">Mat&eacute;riaux</td>
+      <td><input class="rose-text" type="text" id="mat-1-label" value="Clim"></td>
+      <td><input class="rose" type="number" id="mat-1-qty" value="1" min="0" step="1" oninput="recalculate()"></td>
+      <td><input class="free" type="text" id="mat-1-unit" value="m" style="text-align:center;"></td>
+      <td><input class="rose" type="number" id="mat-1-cu" value="1200" min="0" step="0.01" oninput="recalculate()"></td>
+      <td class="total-cell" id="mat-1-tot">1&#160;200,00 &euro;</td>
+    </tr>
+    <tr>
+      <td><input class="rose-text" type="text" id="mat-2-label" value="Raccords divers"></td>
+      <td><input class="rose" type="number" id="mat-2-qty" value="" min="0" step="1" placeholder="0" oninput="recalculate()"></td>
+      <td><input class="free" type="text" id="mat-2-unit" value="u" style="text-align:center;"></td>
+      <td><input class="rose" type="number" id="mat-2-cu" value="" min="0" step="0.01" placeholder="0,00" oninput="recalculate()"></td>
+      <td class="total-cell" id="mat-2-tot">&mdash;</td>
+    </tr>
+    <tr>
+      <td><input class="rose-text" type="text" id="mat-3-label" value="C&acirc;bles"></td>
+      <td><input class="rose" type="number" id="mat-3-qty" value="" min="0" step="1" placeholder="0" oninput="recalculate()"></td>
+      <td><input class="free" type="text" id="mat-3-unit" value="u" style="text-align:center;"></td>
+      <td><input class="rose" type="number" id="mat-3-cu" value="" min="0" step="0.01" placeholder="0,00" oninput="recalculate()"></td>
+      <td class="total-cell" id="mat-3-tot">&mdash;</td>
+    </tr>
+    <tr>
+      <td><input class="rose-text" type="text" id="mat-4-label" placeholder="D&eacute;signation&hellip;"></td>
+      <td><input class="rose" type="number" id="mat-4-qty" value="" min="0" step="1" placeholder="0" oninput="recalculate()"></td>
+      <td><input class="free" type="text" id="mat-4-unit" placeholder="u" style="text-align:center;"></td>
+      <td><input class="rose" type="number" id="mat-4-cu" value="" min="0" step="0.01" placeholder="0,00" oninput="recalculate()"></td>
+      <td class="total-cell" id="mat-4-tot">&mdash;</td>
+    </tr>
+    <tr>
+      <td><input class="rose-text" type="text" id="mat-5-label" placeholder="D&eacute;signation&hellip;"></td>
+      <td><input class="rose" type="number" id="mat-5-qty" value="" min="0" step="1" placeholder="0" oninput="recalculate()"></td>
+      <td><input class="free" type="text" id="mat-5-unit" placeholder="u" style="text-align:center;"></td>
+      <td><input class="rose" type="number" id="mat-5-cu" value="" min="0" step="0.01" placeholder="0,00" oninput="recalculate()"></td>
+      <td class="total-cell" id="mat-5-tot">&mdash;</td>
+    </tr>
+    <tr>
+      <td><input class="rose-text" type="text" id="mat-6-label" placeholder="D&eacute;signation&hellip;"></td>
+      <td><input class="rose" type="number" id="mat-6-qty" value="" min="0" step="1" placeholder="0" oninput="recalculate()"></td>
+      <td><input class="free" type="text" id="mat-6-unit" placeholder="u" style="text-align:center;"></td>
+      <td><input class="rose" type="number" id="mat-6-cu" value="" min="0" step="0.01" placeholder="0,00" oninput="recalculate()"></td>
+      <td class="total-cell" id="mat-6-tot">&mdash;</td>
+    </tr>
+
+    <!-- FRAIS GENERAUX -->
+    <tr>
+      <td class="cat-cell cat-fg" rowspan="3">Frais g&eacute;n&eacute;raux</td>
+      <td>D&eacute;placement</td>
+      <td style="text-align:center;color:#bbb;">1</td>
+      <td style="text-align:center;color:#bbb;font-size:11px;">forfait</td>
+      <td><input class="rose" type="number" id="fg-dep-cu" value="" min="0" step="0.01" placeholder="0,00" oninput="recalculate()"></td>
+      <td class="total-cell" id="fg-dep-tot">&mdash;</td>
+    </tr>
+    <tr>
+      <td>Location outillage</td>
+      <td style="text-align:center;color:#bbb;">1</td>
+      <td style="text-align:center;color:#bbb;font-size:11px;">forfait</td>
+      <td><input class="rose" type="number" id="fg-loc-cu" value="" min="0" step="0.01" placeholder="0,00" oninput="recalculate()"></td>
+      <td class="total-cell" id="fg-loc-tot">&mdash;</td>
+    </tr>
+    <tr>
+      <td>D&eacute;chetterie</td>
+      <td style="text-align:center;color:#bbb;">1</td>
+      <td style="text-align:center;color:#bbb;font-size:11px;">forfait</td>
+      <td><input class="rose" type="number" id="fg-dec-cu" value="" min="0" step="0.01" placeholder="0,00" oninput="recalculate()"></td>
+      <td class="total-cell" id="fg-dec-tot">&mdash;</td>
+    </tr>
+
+    <!-- SOUS-TOTAL -->
+    <tr class="subtotal-row">
+      <td colspan="5" class="section-label">Sous-total</td>
+      <td class="total-cell" id="r-subtotal">2&#160;700,00 &euro;</td>
+    </tr>
+
+    <!-- FRAIS FIXES -->
+    <tr class="ff-row">
+      <td colspan="2" style="font-weight:600;color:#1f4e79;padding-left:12px;">Frais fixes</td>
+      <td><input class="rose" type="number" id="ff-jours" value="3" min="0" step="0.5" oninput="recalculate()"></td>
+      <td style="text-align:center;color:#888;font-size:11px;">j/h</td>
+      <td class="cost-display" id="ff-cu">259,31 &euro;/j</td>
+      <td class="total-cell" id="r-ff">777,92 &euro;</td>
+    </tr>
+
+    <!-- PRIX DE REVIENT -->
+    <tr class="revient-row">
+      <td colspan="5" class="section-label" style="color:#1f4e79;">Prix de revient</td>
+      <td class="total-cell" id="r-revient" style="color:#1f4e79;">3&#160;477,92 &euro;</td>
+    </tr>
+
+    <!-- MARGE -->
+    <tr class="marge-row">
+      <td colspan="5" class="section-sublabel">Marge (<span id="r-marge-pct">20</span>%)</td>
+      <td class="total-cell" id="r-marge" style="color:#27ae60;">695,58 &euro;</td>
+    </tr>
+
+    <!-- PRIX DE VENTE -->
+    <tr class="vente-row">
+      <td colspan="5" style="text-align:right;padding-right:12px;letter-spacing:.3px;">Prix de vente conseill&eacute;</td>
+      <td class="total-cell" id="r-vente" style="color:#ffd700;font-size:16px;">4&#160;173,51 &euro;</td>
+    </tr>
+
+    </tbody>
+  </table>
+</div>
+
+<div class="legend">
+  <span style="color:#888;font-weight:600;">L&eacute;gende :</span>
+  <div class="legend-item"><div class="legend-box" style="background:#FDEADA;border-color:#f0b8a0;"></div> Case &agrave; saisir</div>
+  <div class="legend-item"><div class="legend-box" style="background:#EBF0FA;border-color:#b8c8e0;"></div> Calcul automatique</div>
+  <div class="legend-item"><div class="legend-box" style="background:#D9E1F2;border-color:#b0c0da;"></div> R&eacute;capitulatif</div>
+</div>
+
+</div>
+</div>
+
+<script>
+var FF_ANNUELS_CLIM=233377;
+function v(id){var n=parseFloat(document.getElementById(id).value);return isNaN(n)?0:n;}
+function fmt(x){if(x===null||isNaN(x))return'—';return x.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})+' €';}
+function set(id,val){document.getElementById(id).textContent=val;}
+function showTab(name){
+  document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});
+  document.querySelectorAll('.tab-pane').forEach(function(p){p.classList.remove('active');});
+  var idx=name==='params'?0:1;
+  document.querySelectorAll('.tab')[idx].classList.add('active');
+  document.getElementById('tab-'+name).classList.add('active');
+}
+function recalculate(){
+  var r={bredelle:v('p-bredelle'),dailliez:v('p-dailliez'),jankowiak:v('p-jankowiak'),najder:v('p-najder'),pele:v('p-pele'),ouartani:v('p-ouartani'),interim:v('p-interim')};
+  var nbH=Math.max(v('p-nb-hommes'),1),jpH=Math.max(v('p-jours-homme'),1),totalJH=nbH*jpH,marge=v('p-marge'),coutJH=FF_ANNUELS_CLIM/totalJH;
+  set('p-total-jh',totalJH.toLocaleString('fr-FR'));
+  set('p-cout-jh',coutJH.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})+' €');
+  set('ff-cu',coutJH.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})+' €/j');
+  set('r-marge-pct',marge);
+  [['mo-bredelle-cu',r.bredelle],['mo-dailliez-cu',r.dailliez],['mo-jankowiak-cu',r.jankowiak],['mo-najder-cu',r.najder],['mo-pele-cu',r.pele],['mo-ouartani-cu',r.ouartani],['mo-interim-cu',r.interim]].forEach(function(p){set(p[0],p[1]>0?p[1].toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})+' €/h':'— €/h');});
+  var subtotal=0;
+  [['mo-bredelle',r.bredelle],['mo-dailliez',r.dailliez],['mo-jankowiak',r.jankowiak],['mo-najder',r.najder],['mo-pele',r.pele],['mo-ouartani',r.ouartani],['mo-interim',r.interim]].forEach(function(p){var q=v(p[0]+'-qty'),t=q*p[1];set(p[0]+'-tot',q>0?fmt(t):'—');subtotal+=t;});
+  ['mo-st','mo-l1','mo-l2'].forEach(function(px){var q=v(px+'-qty'),cu=v(px+'-cu'),t=q*cu;set(px+'-tot',(q>0||cu>0)?fmt(t):'—');subtotal+=t;});
+  for(var i=1;i<=6;i++){var q=v('mat-'+i+'-qty'),cu=v('mat-'+i+'-cu'),t=q*cu;set('mat-'+i+'-tot',(q>0||cu>0)?fmt(t):'—');subtotal+=t;}
+  ['dep','loc','dec'].forEach(function(k){var cu=v('fg-'+k+'-cu');set('fg-'+k+'-tot',cu>0?fmt(cu):'—');subtotal+=cu;});
+  set('r-subtotal',fmt(subtotal));
+  var ffJ=v('ff-jours'),ffTotal=coutJH*ffJ;
+  set('r-ff',fmt(ffTotal));
+  var revient=subtotal+ffTotal;
+  set('r-revient',fmt(revient));
+  var margeTotal=revient*(marge/100);
+  set('r-marge',fmt(margeTotal));
+  set('r-vente',fmt(revient+margeTotal));
+}
+recalculate();
+</script>
+</body>
+</html>
